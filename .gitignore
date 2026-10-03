@@ -1,0 +1,6 @@
+node_modules/
+*.log
+.DS_Store
+# lib/ 提交进仓库：GitHub 安装不触发构建，开箱即用
+._*
+.DS_Store

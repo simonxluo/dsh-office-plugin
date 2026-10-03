@@ -1,0 +1,14 @@
+# simon-office-toolkit: agent 自助读写 Office 文档(docx/xlsx/csv)
+#
+# 安装本 bundle 会在 profile 里插入一个禁用行(id: tool-office)，config 为空，
+# 未配置任何字段也不影响启动。可在 profile 的 cordis.patch.yml 里覆盖配置：
+#
+#   - id: tool-office
+#     config:
+#       maxReadChars: 60000   # office_read 单次返回字符上限
+#       maxSheetRows: 500     # xlsx/csv 单次读取行数上限(可 offset 翻页)
+#       csvDelimiter: ','     # csv 默认分隔符
+- insert:
+    - id: tool-office
+      name: simon-office-toolkit
+      config: {}
