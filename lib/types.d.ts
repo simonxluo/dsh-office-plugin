@@ -1,4 +1,4 @@
-/** dsh-office-suite 共享类型 */
+/** dsh-office-plugin 共享类型 */
 /** 工具输出的模型可见渲染块(最小文本块) */
 export interface TextBlock {
     type: 'text';

@@ -116,7 +116,7 @@ export async function writeDocx(
     paragraphs++
   }
   const doc = new Document({
-    creator: 'dsh-office-suite',
+    creator: 'dsh-office-plugin',
     title: title && title.trim() ? title.trim() : undefined,
     numbering: {
       config: [

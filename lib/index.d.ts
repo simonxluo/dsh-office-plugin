@@ -1,4 +1,4 @@
-/** dsh-office-suite 入口:function plugin,Loader 元数据 + 工具注册 */
+/** dsh-office-plugin 入口:function plugin,Loader 元数据 + 工具注册 */
 import { type OfficeConfig } from './config.js';
 export declare const name = "tool-office";
 export declare const inject: string[];

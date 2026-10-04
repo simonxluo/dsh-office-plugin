@@ -89,6 +89,10 @@ test('tools: registration + end-to-end via tools.ts', async () => {
 
   const read = await byName.get('office_read').execute({ path: 'out.xlsx' }, exec)
   assert.match(read.text, /a/)
+  // render 是模型可见通道:必须带上正文,否则调用方看不到内容(防回归)
+  const readRendered = byName.get('office_read').output.render({}, read).map((b) => b.text).join('\n')
+  assert.match(readRendered, /已读取/)
+  assert.match(readRendered, /a/)
 
   await byName.get('office_csv_write').execute({ path: 'out.csv', rows: [['a', 'b'], ['1,2', '3']] }, exec)
   const csvRead = await byName.get('office_read').execute({ path: 'out.csv' }, exec)
@@ -97,6 +101,15 @@ test('tools: registration + end-to-end via tools.ts', async () => {
   await byName.get('office_write_docx').execute({ path: 'out.docx', markdown: '# T\n\nbody' }, exec)
   const docRead = await byName.get('office_read').execute({ path: 'out.docx' }, exec)
   assert.match(docRead.text, /body/)
+  const docRendered = byName.get('office_read').output.render({}, docRead).map((b) => b.text).join('\n')
+  assert.match(docRendered, /body/)
+
+  // 错误路径:不存在的文件、空参数、无法识别的格式、空 ops
+  await assert.rejects(() => byName.get('office_read').execute({ path: 'nope.docx' }, exec), /文件不存在/)
+  await assert.rejects(() => byName.get('office_read').execute({}, exec), /path不能为空/)
+  await byName.get('office_write_docx').execute({ path: 'note.md', markdown: 'plain' }, exec)
+  await assert.rejects(() => byName.get('office_read').execute({ path: 'note.md' }, exec), /无法识别的格式/)
+  await assert.rejects(() => byName.get('office_edit_xlsx').execute({ path: 'out.xlsx', ops: [] }, exec), /ops必须是非空数组/)
 
   const health = await byName.get('office_health').execute({}, exec)
   assert.equal(health.ok, true)
