@@ -3,7 +3,7 @@
 DeepSeek Harness 的 Office 工具包:让 agent 自助**读写 Word(.docx)/ Excel(.xlsx)/ CSV**。
 纯 Node 实现,跨平台(macOS / Windows / Linux),不装 Office 也能用。
 
-## 工具一览(6 个)
+## 工具一览(8 个)
 
 | 工具 | 作用 |
 | --- | --- |
@@ -12,10 +12,22 @@ DeepSeek Harness 的 Office 工具包:让 agent 自助**读写 Word(.docx)/ Exce
 | `office_write_xlsx` | 生成 .xlsx:多工作表、表头样式(加粗+底纹+冻结首行)、公式、列宽;`rows` 二维数组或 `data` 对象数组 |
 | `office_edit_xlsx` | 就地编辑已有 .xlsx:`set_value` / `set_style`(加粗、填充、对齐、数字格式,cell 或 A1:B2)/ `add_row` / `add_sheet` / `delete_sheet`,按序执行 |
 | `office_csv_write` | 写 .csv:RFC 4180 转义、CRLF 行尾,Excel 直接打开 |
-| `office_health` | 离线自检:插件加载、三个引擎可用性、当前配置 |
+| `office_docx_info` | **只读诊断 docx 排版参数**:段落/空段落数、行距模式分布(exact 固定/auto 倍数及磅值)、段前段后、字号分布、中文字体分布、逐段明细。诊断“行距太大/字体缺失/空行多” |
+| `office_fix_docx` | **修复 docx 行距**:统一改为单倍(`single`)/倍数(`multiple`)/固定磅值(`exact`),可选删除纯文本空段落(表格内/含图片/含分节符除外);只改写 `spacing`,字体字号等其他格式不动;`outputPath` 另存、`dryRun` 只统计不写盘 |
+| `office_health` | 离线自检:插件加载、四个引擎可用性、当前配置 |
 
 路径规则:相对路径按**会话工作目录**解析,也接受绝对路径。写入自动创建父目录。
 读取超长会截断并标记 `truncated`;xlsx/csv 用 `offset`/`limit` 翻页。
+
+### 典型场景:行距过大的简历
+
+很多 WPS/Word 生成的文档给每段钉了 `lineRule="exact"` 固定行距(如 10pt 字配 17pt 行距),叠加空段落会很松:
+
+```
+1. office_docx_info 读简历 → 看到 exact 17pt ×15 段、空段落 8 个、微软雅黑
+2. office_fix_docx mode=multiple multiple=1.15 removeEmptyParagraphs=true outputPath=紧凑版.docx
+3. office_read 读紧凑版验证内容无损
+```
 
 ## 安装
 
@@ -43,18 +55,20 @@ dsh plugin --profile <profile> add link:/path/to/dsh-office-plugin      # 本地
 ```sh
 npm install
 npm run build     # tsc → lib/(产物提交进仓库,GitHub 安装免构建)
-npm test          # 构建 + node --test 离线自测(5 组)
+npm test          # 构建 + node --test 离线自测(6 组)
 ```
 
-结构:`src/index.ts`(Loader 元数据+注册)、`src/tools.ts`(6 个工具契约)、
-`src/lib/{csv,xlsx,docx}.ts`(格式引擎)、`src/config.ts`(schemastery 配置)。
+结构:`src/index.ts`(Loader 元数据+注册)、`src/tools.ts`(8 个工具契约)、
+`src/lib/{csv,xlsx,docx,docx-xml}.ts`(格式引擎 + docx XML 检查/修复)、`src/config.ts`(schemastery 配置)。
 
 ## 安全说明
 
 - 插件以 dsh 进程权限运行,读写经 `node:fs`;**相对路径锚定会话工作目录**;
   工具调用本身受会话权限/审批体系管辖
+- `office_fix_docx` 只改写 `word/document.xml` 里的 `<w:spacing>`,其余部件原样重打包;
+  `dryRun` 可先验证
 - 无网络访问、无遥测、无安装脚本(`preinstall`/`postinstall` 均无)
-- 依赖:exceljs / mammoth / docx / @deepseek-ai/schemastery(均为活跃维护库)
+- 依赖:exceljs / mammoth / docx / jszip / @deepseek-ai/schemastery(均为活跃维护库)
 
 ## 许可
 

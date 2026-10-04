@@ -1,6 +1,6 @@
 {
   "name": "dsh-office-plugin",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "DeepSeek Harness Office 工具包：agent 自助读写 Word(.docx)/Excel(.xlsx)/CSV 办公文档",
   "type": "module",
   "main": "lib/index.js",
@@ -44,6 +44,7 @@
     "@deepseek-ai/schemastery": "^3.18.1",
     "docx": "^9.5.1",
     "exceljs": "^4.4.0",
+    "jszip": "^3.10.2",
     "mammoth": "^1.9.0"
   },
   "devDependencies": {

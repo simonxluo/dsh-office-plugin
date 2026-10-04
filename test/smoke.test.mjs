@@ -4,6 +4,7 @@ import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 import { test } from 'node:test'
+import jszip from 'jszip'
 
 import { resolveConfig } from '../lib/config.js'
 import { parseCsv, toCsv } from '../lib/lib/csv.js'
@@ -74,7 +75,8 @@ test('tools: registration + end-to-end via tools.ts', async () => {
   const config = resolveConfig({})
   for (const def of buildOfficeTools(config)) ctx.tools.register(def)
   assert.deepEqual(registered.map((r) => r.name), [
-    'office_read', 'office_write_docx', 'office_write_xlsx', 'office_edit_xlsx', 'office_csv_write', 'office_health',
+    'office_read', 'office_write_docx', 'office_write_xlsx', 'office_edit_xlsx', 'office_csv_write',
+    'office_health', 'office_docx_info', 'office_fix_docx',
   ])
 
   const dir = tmpDir()
@@ -113,5 +115,79 @@ test('tools: registration + end-to-end via tools.ts', async () => {
 
   const health = await byName.get('office_health').execute({}, exec)
   assert.equal(health.ok, true)
+  fs.rmSync(dir, { recursive: true, force: true })
+})
+
+test('docx info/fix: 行距诊断与修复', async () => {
+  const dir = tmpDir()
+  const file = path.join(dir, 'spaced.docx')
+  // 手工造一个 docx:正文 exact 17pt(段前段后 6pt)+ 一个空段 exact 20pt + 一个无 spacing 段
+  const xml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>
+<w:p><w:pPr><w:spacing w:before="120" w:after="120" w:line="340" w:lineRule="exact"/></w:pPr><w:r><w:rPr><w:rFonts w:eastAsia="微软雅黑"/><w:sz w:val="20"/></w:rPr><w:t>第一段正文</w:t></w:r></w:p>
+<w:p><w:pPr><w:spacing w:line="400" w:lineRule="exact"/></w:pPr></w:p>
+<w:p><w:r><w:t>尾段</w:t></w:r></w:p>
+</w:body></w:document>`
+  const zip = new jszip()
+  zip.file('word/document.xml', xml)
+  fs.writeFileSync(file, await zip.generateAsync({ type: 'nodebuffer' }))
+
+  const config = resolveConfig({})
+  const byName = new Map(buildOfficeTools(config).map((d) => [d.name, d]))
+  const exec = { agent: { session: { header: { cwd: dir } } } }
+
+  // 1) 参数获取
+  const info = await byName.get('office_docx_info').execute({ path: 'spaced.docx' }, exec)
+  assert.equal(info.paragraphs, 3)
+  assert.equal(info.emptyParagraphs, 1)
+  assert.deepEqual(info.fonts, { 微软雅黑: 1 })
+  const exact17 = info.lineSpacing.find((s) => s.lineRule === 'exact' && s.linePt === 17)
+  assert.equal(exact17.count, 1)
+  assert.equal(info.items[0].beforePt, 6)
+  const infoRendered = byName.get('office_docx_info').output.render({}, info).map((b) => b.text).join('\n')
+  assert.match(infoRendered, /行距分布/)
+  assert.match(infoRendered, /微软雅黑/)
+
+  // 2) dryRun 不写盘
+  const before = fs.readFileSync(file)
+  const dry = await byName.get('office_fix_docx').execute(
+    { path: 'spaced.docx', mode: 'single', removeEmptyParagraphs: true, dryRun: true },
+    exec,
+  )
+  assert.equal(dry.dryRun, true)
+  assert.equal(dry.changed, 2)
+  assert.equal(dry.removedEmpty, 1)
+  assert.ok(before.equals(fs.readFileSync(file)), 'dryRun 不应修改文件')
+
+  // 3) 真修复:单倍 + 删空段,输出为合法 zip(可被 inspect 再读)
+  const fixed = await byName.get('office_fix_docx').execute(
+    { path: 'spaced.docx', mode: 'single', removeEmptyParagraphs: true },
+    exec,
+  )
+  assert.equal(fixed.changed, 2)
+  assert.equal(fixed.removedEmpty, 1)
+  assert.equal(fixed.after['auto/12pt'], 2)
+  const info2 = await byName.get('office_docx_info').execute({ path: 'spaced.docx' }, exec)
+  assert.equal(info2.paragraphs, 2)
+  assert.equal(info2.emptyParagraphs, 0)
+  assert.equal(info2.items[0].beforePt, 6, 'before/after 应保留')
+  const fixRendered = byName.get('office_fix_docx').output.render({}, fixed).map((b) => b.text).join('\n')
+  assert.match(fixRendered, /已修复/)
+  assert.match(fixRendered, /单倍/)
+
+  // 4) 倍数模式 + outputPath 另存(原件不动)
+  const multiple = await byName.get('office_fix_docx').execute(
+    { path: 'spaced.docx', mode: 'multiple', multiple: 1.15, outputPath: 'spaced-2.docx' },
+    exec,
+  )
+  assert.equal(multiple.rule.includes('276'), true)
+  assert.ok(fs.existsSync(path.join(dir, 'spaced-2.docx')))
+  const info3 = await byName.get('office_docx_info').execute({ path: 'spaced-2.docx' }, exec)
+  assert.equal(info3.lineSpacing[0].linePt, 13.8)
+
+  // 5) 缺参数报错
+  await assert.rejects(() => byName.get('office_fix_docx').execute({ path: 'spaced.docx', mode: 'multiple' }, exec), /multiple/)
+  await assert.rejects(() => byName.get('office_fix_docx').execute({ path: 'spaced.docx', mode: 'exact' }, exec), /linePt/)
+
   fs.rmSync(dir, { recursive: true, force: true })
 })
