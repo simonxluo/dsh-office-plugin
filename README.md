@@ -1,4 +1,4 @@
-# simon-office-toolkit
+# dsh-office-plugin
 
 DeepSeek Harness 的 Office 工具包:让 agent 自助**读写 Word(.docx)/ Excel(.xlsx)/ CSV**。
 纯 Node 实现,跨平台(macOS / Windows / Linux),不装 Office 也能用。
@@ -21,7 +21,7 @@ DeepSeek Harness 的 Office 工具包:让 agent 自助**读写 Word(.docx)/ Exce
 
 ```
 dsh plugin --profile <profile> add github:simonxluo/dsh-office-plugin   # GitHub(已带构建产物)
-dsh plugin --profile <profile> add link:/path/to/simon-office-toolkit      # 本地开发
+dsh plugin --profile <profile> add link:/path/to/dsh-office-plugin      # 本地开发
 ```
 
 装完重启 dsh 并**新建会话**(工具清单会话级加载)。

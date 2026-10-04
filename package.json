@@ -1,5 +1,5 @@
 {
-  "name": "simon-office-toolkit",
+  "name": "dsh-office-plugin",
   "version": "0.1.0",
   "description": "DeepSeek Harness Office 工具包：agent 自助读写 Word(.docx)/Excel(.xlsx)/CSV 办公文档",
   "type": "module",

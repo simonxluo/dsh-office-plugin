@@ -1,4 +1,4 @@
-# simon-office-toolkit: agent 自助读写 Office 文档(docx/xlsx/csv)
+# dsh-office-plugin: agent 自助读写 Office 文档(docx/xlsx/csv)
 #
 # 安装本 bundle 会在 profile 里插入一个禁用行(id: tool-office)，config 为空，
 # 未配置任何字段也不影响启动。可在 profile 的 cordis.patch.yml 里覆盖配置：
@@ -10,5 +10,5 @@
 #       csvDelimiter: ','     # csv 默认分隔符
 - insert:
     - id: tool-office
-      name: simon-office-toolkit
+      name: dsh-office-plugin
       config: {}
