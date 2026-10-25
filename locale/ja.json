@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "Office ツールキット",
+    "description": "DeepSeek Harness Office ツールキット：Word(.docx)/Excel(.xlsx)/CSV オフィス文書を agent が自律的に読み書きできます。"
+  }
+}
